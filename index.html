@@ -4,16 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separador de Tickets V3.1 (Validado & Clean)</title>
+    <title>Separador de Tickets V4 (Com Cores e Bordas)</title>
 
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
-            background-color: #f4f4f9;
+            background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,65 +25,67 @@
         .container {
             background: white;
             padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             text-align: center;
             width: 450px;
         }
 
         h2 {
-            color: #333;
-            margin-bottom: 10px;
+            color: #2c3e50;
+            margin-bottom: 5px;
         }
 
         p {
-            color: #666;
+            color: #7f8c8d;
             font-size: 14px;
             margin-bottom: 30px;
         }
 
-        /* Botões Modulares */
         .btn {
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s ease;
             width: 100%;
             display: block;
             margin-bottom: 15px;
             box-sizing: border-box;
+            border: none;
         }
 
         .btn-outline {
-            border: 2px solid #888;
-            color: #666;
-            background-color: white;
+            border: 2px solid #bdc3c7;
+            color: #7f8c8d;
+            background-color: transparent;
         }
 
         .btn-outline:hover {
-            background-color: #f5f5f5;
-            border-color: #666;
+            border-color: #7f8c8d;
+            background-color: #f8f9fa;
+            color: #2c3e50;
         }
 
         .btn-success {
-            background-color: #28a745;
+            background-color: #27ae60;
             color: white;
-            border: 2px solid #28a745;
+            box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2);
             display: none;
-            /* Estado inicial: oculto */
         }
 
         .btn-success:hover {
-            background-color: #218838;
-            border-color: #218838;
+            background-color: #219150;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(39, 174, 96, 0.3);
         }
 
         .btn-success:disabled {
-            background-color: #94d3a2;
-            border-color: #94d3a2;
+            background-color: #95a5a6;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         #fileInput {
@@ -90,27 +93,27 @@
         }
 
         #fileName {
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #2c3e50;
             margin: 10px 0 20px 0;
             min-height: 20px;
             word-break: break-all;
+            font-size: 14px;
         }
 
         #status {
             margin-top: 15px;
             font-size: 13px;
-            color: #888;
+            color: #95a5a6;
             min-height: 20px;
         }
 
-        /* CSS LIMPO: Loader inicia oculto (display: none) */
         .loader {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #28a745;
+            border-top: 3px solid #27ae60;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             animation: spin 1s linear infinite;
             display: none;
             vertical-align: middle;
@@ -132,8 +135,8 @@
 <body>
 
     <div class="container">
-        <h2>Separador de Tickets V3.1</h2>
-        <p>Separa por Marca, limpa datas e gera ZIP.</p>
+        <h2>Separador de Tickets V4</h2>
+        <p>Separação com Design Profissional (Cores e Bordas)</p>
 
         <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">
             📂 Escolher Arquivo LDB
@@ -153,14 +156,37 @@
     <script>
         let workbookGlobal = null;
 
+        // Definição dos Estilos (Cores e Bordas)
+        const estiloHeader = {
+            font: { bold: true, color: { rgb: "FFFFFF" }, name: "Calibri", sz: 11 },
+            fill: { fgColor: { rgb: "4472C4" } }, // Azul Excel
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+                top: { style: "thin", color: { auto: 1 } },
+                right: { style: "thin", color: { auto: 1 } },
+                bottom: { style: "thin", color: { auto: 1 } },
+                left: { style: "thin", color: { auto: 1 } }
+            }
+        };
+
+        const estiloDados = {
+            font: { name: "Calibri", sz: 11 },
+            alignment: { vertical: "center" },
+            border: {
+                top: { style: "thin", color: { rgb: "D9D9D9" } }, // Cinza claro
+                right: { style: "thin", color: { rgb: "D9D9D9" } },
+                bottom: { style: "thin", color: { rgb: "D9D9D9" } },
+                left: { style: "thin", color: { rgb: "D9D9D9" } }
+            }
+        };
+
         document.getElementById('fileInput').addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            // Validação de extensão
             const validExtensions = /(\.xlsx|\.xls|\.xlsm)$/i;
             if (!validExtensions.exec(file.name)) {
-                alert('Arquivo inválido! Por favor selecione um arquivo Excel (.xlsx, .xls, .xlsm).');
+                alert('Arquivo inválido! Selecione Excel (.xlsx, .xls, .xlsm).');
                 this.value = '';
                 document.getElementById('fileName').innerText = "";
                 document.getElementById('processBtn').style.display = 'none';
@@ -178,10 +204,10 @@
                     workbookGlobal = XLSX.read(data, { type: 'array' });
 
                     document.getElementById('loader').style.display = 'none';
-                    document.getElementById('status').innerText = "Arquivo válido! Clique em Processar.";
+                    document.getElementById('status').innerText = "Arquivo carregado. Pronto para gerar.";
                     document.getElementById('processBtn').style.display = 'block';
                 } catch (err) {
-                    alert("Erro ao ler o arquivo Excel. O arquivo pode estar corrompido.");
+                    alert("Erro ao ler o arquivo. Pode estar corrompido.");
                     document.getElementById('status').innerText = "Erro na leitura.";
                     document.getElementById('loader').style.display = 'none';
                 }
@@ -195,7 +221,7 @@
             const btn = document.getElementById('processBtn');
             const originalText = btn.innerText;
             btn.disabled = true;
-            btn.innerText = "Processando...";
+            btn.innerText = "Gerando Planilhas...";
             document.getElementById('loader').style.display = 'inline-block';
 
             try {
@@ -203,12 +229,11 @@
                 const worksheet = workbookGlobal.Sheets[firstSheetName];
                 const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
-                const HEADER_ROW_INDEX = 2; // Linha 3 (índice 2)
-                if (rawData.length <= HEADER_ROW_INDEX) throw new Error("Planilha muito curta ou vazia.");
+                const HEADER_ROW_INDEX = 2;
+                if (rawData.length <= HEADER_ROW_INDEX) throw new Error("Planilha vazia ou inválida.");
 
                 const headerRow = rawData[HEADER_ROW_INDEX];
 
-                // Mapeamento
                 const mapCols = {
                     "Key": -1, "Brand": -1, "Catalog ID": -1,
                     "Reporter": -1, "Created": -1, "Status": -1
@@ -226,7 +251,6 @@
 
                 if (mapCols["Brand"] === -1) throw new Error("Coluna 'Brand' não encontrada na linha 3.");
 
-                // Agrupamento
                 const ticketsPorMarca = {};
 
                 for (let i = HEADER_ROW_INDEX + 1; i < rawData.length; i++) {
@@ -239,40 +263,54 @@
 
                     if (!ticketsPorMarca[brandKey]) {
                         ticketsPorMarca[brandKey] = { name: brandName, rows: [] };
-                        // Header fixo no novo arquivo
+                        // Header
                         ticketsPorMarca[brandKey].rows.push([
                             "Tickets", "Marca", "EAN", "Responsavel", "Data Criacao", "Status", "Prioridade", "KPI Foco"
                         ]);
                     }
 
-                    const newRow = [
+                    ticketsPorMarca[brandKey].rows.push([
                         row[mapCols["Key"]],
                         row[mapCols["Brand"]],
                         row[mapCols["Catalog ID"]],
                         row[mapCols["Reporter"]],
                         converterData(row[mapCols["Created"]]),
                         row[mapCols["Status"]],
-                        "",
-                        ""
-                    ];
-                    ticketsPorMarca[brandKey].rows.push(newRow);
+                        "", ""
+                    ]);
                 }
 
-                // Gerar ZIP
                 const zip = new JSZip();
 
                 for (const key in ticketsPorMarca) {
                     const item = ticketsPorMarca[key];
                     const cleanName = item.name.replace(/[\/\\?%*:|"<>]/g, '_');
 
+                    // Cria Sheet
                     const newWs = XLSX.utils.aoa_to_sheet(item.rows);
 
-                    // Larguras ajustadas
-                    const wscols = [
+                    // === APLICAÇÃO DE ESTILOS ===
+                    const range = XLSX.utils.decode_range(newWs['!ref']);
+
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+                            if (!newWs[cell_address]) continue;
+
+                            // Linha 0 = Cabeçalho, Resto = Dados
+                            if (R === 0) {
+                                newWs[cell_address].s = estiloHeader;
+                            } else {
+                                newWs[cell_address].s = estiloDados;
+                            }
+                        }
+                    }
+
+                    // Larguras
+                    newWs['!cols'] = [
                         { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 },
                         { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
                     ];
-                    newWs['!cols'] = wscols;
 
                     const newWb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(newWb, newWs, "Base Tickets");
@@ -282,7 +320,7 @@
                 }
 
                 const content = await zip.generateAsync({ type: "blob" });
-                saveAs(content, "Relatorios_Tickets_Separados.zip");
+                saveAs(content, "Tickets_Formatados_V4.zip");
 
                 document.getElementById('status').innerText = "Sucesso! Download iniciado.";
 
@@ -298,43 +336,25 @@
 
         function normalizarTexto(str) {
             if (!str) return "";
-            return str.toString()
-                .replace(/\u00A0/g, " ")
-                .replace(/\t/g, " ")
-                .replace(/ /g, "")
-                .toLowerCase();
+            return str.toString().replace(/\u00A0/g, " ").replace(/\t/g, " ").replace(/ /g, "").toLowerCase();
         }
 
         function converterData(val) {
             if (!val) return "";
-
             if (typeof val === 'number') {
                 const date = new Date(Math.round((val - 25569) * 86400 * 1000));
                 return formatDateBr(date);
             }
-
-            let txt = String(val).toLowerCase();
-            txt = txt.replace(/\//g, " ").replace(/-/g, " ").replace(/,/g, " ").replace(/\./g, " ");
-            txt = txt.replace(/\s+/g, " ").trim();
-
+            let txt = String(val).toLowerCase().replace(/[\/\-\,\.]/g, " ").replace(/\s+/g, " ").trim();
             const parts = txt.split(" ");
             if (parts.length >= 3) {
                 const d = parseInt(parts[0]);
                 const mStr = parts[1].substring(0, 3);
                 let y = parseInt(parts[2]);
-
-                // Mapeamento meses
-                const meses = {
-                    "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
-                    "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11,
-                    "out": 9, "ago": 7, "fev": 1, "abr": 3, "mai": 4, "dez": 11,
-                    "set": 8
-                };
-
+                const meses = { "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5, "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11, "out": 9, "ago": 7, "fev": 1, "abr": 3, "mai": 4, "dez": 11, "set": 8 };
                 if (!isNaN(d) && !isNaN(y) && meses.hasOwnProperty(mStr)) {
                     if (y < 100) y += 2000;
-                    const dateObj = new Date(y, meses[mStr], d);
-                    return formatDateBr(dateObj);
+                    return formatDateBr(new Date(y, meses[mStr], d));
                 }
             }
             return val;
@@ -342,10 +362,7 @@
 
         function formatDateBr(date) {
             if (isNaN(date.getTime())) return "";
-            const d = String(date.getDate()).padStart(2, '0');
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const y = date.getFullYear();
-            return `${d}/${m}/${y}`;
+            return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
         }
     </script>
 
