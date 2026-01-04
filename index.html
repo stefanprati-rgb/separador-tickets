@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separador de Tickets V3.1 (Validado & Clean)</title>
+
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 450px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        /* Botões Modulares */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            display: block;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .btn-outline {
+            border: 2px solid #888;
+            color: #666;
+            background-color: white;
+        }
+
+        .btn-outline:hover {
+            background-color: #f5f5f5;
+            border-color: #666;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+            border: 2px solid #28a745;
+            display: none;
+            /* Estado inicial: oculto */
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #218838;
+        }
+
+        .btn-success:disabled {
+            background-color: #94d3a2;
+            border-color: #94d3a2;
+            cursor: not-allowed;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #fileName {
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0 20px 0;
+            min-height: 20px;
+            word-break: break-all;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #888;
+            min-height: 20px;
+        }
+
+        /* CSS LIMPO: Loader inicia oculto (display: none) */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #28a745;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: none;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Separador de Tickets V3.1</h2>
+        <p>Separa por Marca, limpa datas e gera ZIP.</p>
+
+        <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">
+            📂 Escolher Arquivo LDB
+        </button>
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm" />
+
+        <div id="fileName"></div>
+
+        <button id="processBtn" class="btn btn-success" onclick="processarArquivo()">
+            ⚡ Processar e Baixar ZIP
+        </button>
+
+        <div id="status">Aguardando arquivo...</div>
+        <div class="loader" id="loader"></div>
+    </div>
+
+    <script>
+        let workbookGlobal = null;
+
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validação de extensão
+            const validExtensions = /(\.xlsx|\.xls|\.xlsm)$/i;
+            if (!validExtensions.exec(file.name)) {
+                alert('Arquivo inválido! Por favor selecione um arquivo Excel (.xlsx, .xls, .xlsm).');
+                this.value = '';
+                document.getElementById('fileName').innerText = "";
+                document.getElementById('processBtn').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('fileName').innerText = file.name;
+            document.getElementById('status').innerText = "Lendo estrutura...";
+            document.getElementById('loader').style.display = 'inline-block';
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbookGlobal = XLSX.read(data, { type: 'array' });
+
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('status').innerText = "Arquivo válido! Clique em Processar.";
+                    document.getElementById('processBtn').style.display = 'block';
+                } catch (err) {
+                    alert("Erro ao ler o arquivo Excel. O arquivo pode estar corrompido.");
+                    document.getElementById('status').innerText = "Erro na leitura.";
+                    document.getElementById('loader').style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        async function processarArquivo() {
+            if (!workbookGlobal) return;
+
+            const btn = document.getElementById('processBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Processando...";
+            document.getElementById('loader').style.display = 'inline-block';
+
+            try {
+                const firstSheetName = workbookGlobal.SheetNames[0];
+                const worksheet = workbookGlobal.Sheets[firstSheetName];
+                const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+                const HEADER_ROW_INDEX = 2; // Linha 3 (índice 2)
+                if (rawData.length <= HEADER_ROW_INDEX) throw new Error("Planilha muito curta ou vazia.");
+
+                const headerRow = rawData[HEADER_ROW_INDEX];
+
+                // Mapeamento
+                const mapCols = {
+                    "Key": -1, "Brand": -1, "Catalog ID": -1,
+                    "Reporter": -1, "Created": -1, "Status": -1
+                };
+
+                headerRow.forEach((val, idx) => {
+                    const cleanVal = normalizarTexto(String(val));
+                    if (cleanVal === "key") mapCols["Key"] = idx;
+                    if (cleanVal === "brand") mapCols["Brand"] = idx;
+                    if (cleanVal === "catalogid") mapCols["Catalog ID"] = idx;
+                    if (cleanVal === "reporter") mapCols["Reporter"] = idx;
+                    if (cleanVal === "created") mapCols["Created"] = idx;
+                    if (cleanVal === "status") mapCols["Status"] = idx;
+                });
+
+                if (mapCols["Brand"] === -1) throw new Error("Coluna 'Brand' não encontrada na linha 3.");
+
+                // Agrupamento
+                const ticketsPorMarca = {};
+
+                for (let i = HEADER_ROW_INDEX + 1; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    const rawBrand = row[mapCols["Brand"]];
+                    if (!rawBrand) continue;
+
+                    const brandKey = normalizarTexto(String(rawBrand));
+                    const brandName = String(rawBrand).trim();
+
+                    if (!ticketsPorMarca[brandKey]) {
+                        ticketsPorMarca[brandKey] = { name: brandName, rows: [] };
+                        // Header fixo no novo arquivo
+                        ticketsPorMarca[brandKey].rows.push([
+                            "Tickets", "Marca", "EAN", "Responsavel", "Data Criacao", "Status", "Prioridade", "KPI Foco"
+                        ]);
+                    }
+
+                    const newRow = [
+                        row[mapCols["Key"]],
+                        row[mapCols["Brand"]],
+                        row[mapCols["Catalog ID"]],
+                        row[mapCols["Reporter"]],
+                        converterData(row[mapCols["Created"]]),
+                        row[mapCols["Status"]],
+                        "",
+                        ""
+                    ];
+                    ticketsPorMarca[brandKey].rows.push(newRow);
+                }
+
+                // Gerar ZIP
+                const zip = new JSZip();
+
+                for (const key in ticketsPorMarca) {
+                    const item = ticketsPorMarca[key];
+                    const cleanName = item.name.replace(/[\/\\?%*:|"<>]/g, '_');
+
+                    const newWs = XLSX.utils.aoa_to_sheet(item.rows);
+
+                    // Larguras ajustadas
+                    const wscols = [
+                        { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 },
+                        { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
+                    ];
+                    newWs['!cols'] = wscols;
+
+                    const newWb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(newWb, newWs, "Base Tickets");
+
+                    const excelBuffer = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
+                    zip.file(`Base_Tickets_${cleanName}.xlsx`, excelBuffer);
+                }
+
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, "Relatorios_Tickets_Separados.zip");
+
+                document.getElementById('status').innerText = "Sucesso! Download iniciado.";
+
+            } catch (err) {
+                alert("Erro: " + err.message);
+                document.getElementById('status').innerText = "Erro no processamento.";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        function normalizarTexto(str) {
+            if (!str) return "";
+            return str.toString()
+                .replace(/\u00A0/g, " ")
+                .replace(/\t/g, " ")
+                .replace(/ /g, "")
+                .toLowerCase();
+        }
+
+        function converterData(val) {
+            if (!val) return "";
+
+            if (typeof val === 'number') {
+                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                return formatDateBr(date);
+            }
+
+            let txt = String(val).toLowerCase();
+            txt = txt.replace(/\//g, " ").replace(/-/g, " ").replace(/,/g, " ").replace(/\./g, " ");
+            txt = txt.replace(/\s+/g, " ").trim();
+
+            const parts = txt.split(" ");
+            if (parts.length >= 3) {
+                const d = parseInt(parts[0]);
+                const mStr = parts[1].substring(0, 3);
+                let y = parseInt(parts[2]);
+
+                // Mapeamento meses
+                const meses = {
+                    "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
+                    "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11,
+                    "out": 9, "ago": 7, "fev": 1, "abr": 3, "mai": 4, "dez": 11,
+                    "set": 8
+                };
+
+                if (!isNaN(d) && !isNaN(y) && meses.hasOwnProperty(mStr)) {
+                    if (y < 100) y += 2000;
+                    const dateObj = new Date(y, meses[mStr], d);
+                    return formatDateBr(dateObj);
+                }
+            }
+            return val;
+        }
+
+        function formatDateBr(date) {
+            if (isNaN(date.getTime())) return "";
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+    </script>
+
+</body>
+
+</html>
