@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separador Tickets V5 (Legendado & Colorido)</title>
+    <title>Separador Tickets V6 (Blindado)</title>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 
@@ -124,8 +124,8 @@
 <body>
 
     <div class="container">
-        <h2>Separador Tickets V5</h2>
-        <p>Com Título, Legenda e Cores Condicionais.</p>
+        <h2>Separador Tickets V6</h2>
+        <p>Versão Corrigida e Validada.</p>
 
         <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📂 Carregar LDB</button>
         <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm" />
@@ -141,17 +141,11 @@
     <script>
         let workbookGlobal = null;
 
-        // === CONFIGURAÇÃO DE CORES DOS STATUS (RGB HEX) ===
         const CORES_STATUS = {
-            "open": "C6EFCE",                   // Verde Claro
-            "client review": "FFEB9C",          // Laranja Claro
-            "in queue": "FFFFCC",               // Amarelo Claro
-            "handover": "BDD7EE",               // Azul Claro
-            "need more information": "FFC7CE",  // Vermelho Claro
-            "closed": "D9D9D9"                  // Cinza
+            "open": "C6EFCE", "client review": "FFEB9C", "in queue": "FFFFCC",
+            "handover": "BDD7EE", "need more information": "FFC7CE", "closed": "D9D9D9"
         };
 
-        // Definições da Legenda
         const LEGENDA = [
             { status: "Open", desc: "Abertos", color: CORES_STATUS["open"] },
             { status: "Client Review", desc: "Aguardando aprovação das marcas", color: CORES_STATUS["client review"] },
@@ -165,9 +159,13 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // Validação simples
+            // --- CORREÇÃO 3: Reset de estado se arquivo inválido ---
             if (!file.name.match(/\.(xlsx|xls|xlsm)$/i)) {
                 alert('Apenas arquivos Excel são permitidos.');
+                this.value = ''; // Limpa o input
+                document.getElementById('fileName').innerText = "";
+                document.getElementById('processBtn').style.display = 'none';
+                document.getElementById('status').innerText = "Aguardando arquivo...";
                 return;
             }
 
@@ -184,7 +182,10 @@
                     document.getElementById('status').innerText = "Pronto.";
                     document.getElementById('processBtn').style.display = 'block';
                 } catch (err) {
-                    alert("Erro ao ler arquivo.");
+                    // --- CORREÇÃO 1: Esconder Loader no erro de leitura ---
+                    alert("Erro crítico ao ler o arquivo.");
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('status').innerText = "Erro na leitura.";
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -201,16 +202,20 @@
                 const worksheet = workbookGlobal.Sheets[workbookGlobal.SheetNames[0]];
                 const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
-                const HEADER_IDX = 2; // Linha 3 original
+                const HEADER_IDX = 2;
                 if (rawData.length <= HEADER_IDX) throw new Error("Planilha vazia.");
 
-                // Mapeamento
                 const headerRow = rawData[HEADER_IDX];
                 const map = { "Key": -1, "Brand": -1, "Catalog ID": -1, "Reporter": -1, "Created": -1, "Status": -1 };
 
                 headerRow.forEach((v, i) => {
                     const s = String(v).toLowerCase().trim();
-                    if (s.includes("key")) map["Key"] = i;
+
+                    // --- CORREÇÃO 2: Mapeamento Seguro de Key ---
+                    // Evita falsos positivos como "Monkey" ou "Donkey"
+                    if (s === "key" || s === "tickets" || s === "ticket id") map["Key"] = i;
+
+                    // Outros mapeamentos
                     if (s.includes("brand")) map["Brand"] = i;
                     if (s.includes("catalog") && s.includes("id")) map["Catalog ID"] = i;
                     if (s.includes("reporter")) map["Reporter"] = i;
@@ -220,7 +225,6 @@
 
                 if (map["Brand"] === -1) throw new Error("Coluna Brand não encontrada.");
 
-                // Agrupamento
                 const groups = {};
                 for (let i = HEADER_IDX + 1; i < rawData.length; i++) {
                     const row = rawData[i];
@@ -232,10 +236,7 @@
 
                     if (!groups[key]) {
                         groups[key] = { name: name, rows: [] };
-                        // Adiciona linhas iniciais para compor o layout
-                        // Linha 0: Título (será mesclado depois)
                         groups[key].rows.push(["Tickets LDB", "", "", "", "", "", ""]);
-                        // Linha 1: Cabeçalhos
                         groups[key].rows.push(["Tickets", "Marca", "EAN", "Responsavel", "Data Criacao", "Status", "OBS"]);
                     }
 
@@ -246,33 +247,27 @@
                         row[map["Reporter"]],
                         converterData(row[map["Created"]]),
                         row[map["Status"]],
-                        "" // OBS Vazia
+                        ""
                     ]);
                 }
 
                 const zip = new JSZip();
 
-                // GERAÇÃO DOS ARQUIVOS
                 for (const k in groups) {
                     const item = groups[k];
                     const ws = XLSX.utils.aoa_to_sheet(item.rows);
 
-                    // 1. MESCLAR TÍTULO (A1 até G1)
                     if (!ws['!merges']) ws['!merges'] = [];
-                    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }); // Mescla A1:G1
+                    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } });
 
-                    // 2. ATIVAR FILTROS (Na linha 2, índice 1)
-                    // Ref A2:G(ultimaLinha)
                     const range = XLSX.utils.decode_range(ws['!ref']);
                     ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 1, c: 0 }, e: { r: range.e.r, c: 6 } }) };
 
-                    // 3. ESTILIZAÇÃO COMPLETA
                     for (let R = range.s.r; R <= range.e.r; ++R) {
                         for (let C = range.s.c; C <= range.e.c; ++C) {
                             const addr = XLSX.utils.encode_cell({ r: R, c: C });
                             if (!ws[addr]) continue;
 
-                            // Estilo Base (Bordas finas)
                             let style = {
                                 font: { name: "Calibri", sz: 11 },
                                 border: {
@@ -284,75 +279,55 @@
                                 alignment: { vertical: "center" }
                             };
 
-                            // A. Estilo do Título (Linha 0)
                             if (R === 0) {
                                 style.font = { name: "Calibri", sz: 16, bold: true, color: { rgb: "333333" } };
                                 style.alignment = { horizontal: "center", vertical: "center" };
-                                style.fill = { fgColor: { rgb: "F2F2F2" } }; // Cinza bem claro
-                            }
-                            // B. Estilo do Cabeçalho (Linha 1)
-                            else if (R === 1) {
+                                style.fill = { fgColor: { rgb: "F2F2F2" } };
+                            } else if (R === 1) {
                                 style.font = { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } };
-                                style.fill = { fgColor: { rgb: "4472C4" } }; // Azul Excel
+                                style.fill = { fgColor: { rgb: "4472C4" } };
                                 style.alignment = { horizontal: "center", vertical: "center" };
-                            }
-                            // C. Formatação Condicional de Status (Coluna F, índice 5)
-                            else if (C === 5) { // Coluna Status
+                            } else if (C === 5) {
                                 const valStatus = String(ws[addr].v).toLowerCase().trim();
                                 if (CORES_STATUS[valStatus]) {
                                     style.fill = { fgColor: { rgb: CORES_STATUS[valStatus] } };
                                 }
                             }
-
                             ws[addr].s = style;
                         }
                     }
 
-                    // 4. INSERIR LEGENDA (Coluna I em diante, índice 8)
-                    // Posição: Coluna I (8), J (9). Começando na linha 3 (índice 2).
                     const startRow = 2;
-                    const colLegenda = 8; // I
+                    const colLegenda = 8;
 
-                    // Título da Legenda
                     const cellTitle = XLSX.utils.encode_cell({ r: startRow, c: colLegenda });
                     ws[cellTitle] = { v: "LEGENDA STATUS", t: 's', s: { font: { bold: true }, border: { bottom: { style: "medium" } } } };
 
                     LEGENDA.forEach((leg, idx) => {
                         const rowL = startRow + 1 + idx;
-
-                        // Célula Cor/Nome (I)
                         const addrKey = XLSX.utils.encode_cell({ r: rowL, c: colLegenda });
                         ws[addrKey] = {
-                            v: leg.status,
-                            t: 's',
+                            v: leg.status, t: 's',
                             s: {
                                 fill: { fgColor: { rgb: leg.color } },
                                 border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } },
                                 font: { bold: true, sz: 10 }
                             }
                         };
-
-                        // Célula Descrição (J)
                         const addrDesc = XLSX.utils.encode_cell({ r: rowL, c: colLegenda + 1 });
-                        ws[addrDesc] = {
-                            v: leg.desc,
-                            t: 's',
-                            s: { font: { sz: 10, italic: true } }
-                        };
+                        ws[addrDesc] = { v: leg.desc, t: 's', s: { font: { sz: 10, italic: true } } };
                     });
 
-                    // 5. AJUSTE DE LARGURAS
+                    const currentRange = XLSX.utils.decode_range(ws['!ref']);
+                    const maxLegendaRow = startRow + 1 + LEGENDA.length;
+                    currentRange.e.c = Math.max(currentRange.e.c, 9);
+                    currentRange.e.r = Math.max(currentRange.e.r, maxLegendaRow);
+                    ws['!ref'] = XLSX.utils.encode_range(currentRange);
+
                     ws['!cols'] = [
-                        { wch: 15 }, // Tickets
-                        { wch: 20 }, // Marca
-                        { wch: 15 }, // EAN
-                        { wch: 25 }, // Resp
-                        { wch: 15 }, // Data
-                        { wch: 20 }, // Status (Mais largo para caber texto)
-                        { wch: 30 }, // OBS (Largo para escrever)
-                        { wch: 2 },  // Espaço em branco (H)
-                        { wch: 25 }, // Legenda Status (I)
-                        { wch: 40 }  // Legenda Desc (J)
+                        { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 },
+                        { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 2 },
+                        { wch: 25 }, { wch: 40 }
                     ];
 
                     const wbNew = XLSX.utils.book_new();
@@ -362,7 +337,7 @@
                 }
 
                 const content = await zip.generateAsync({ type: "blob" });
-                saveAs(content, "Tickets_LDB_V5.zip");
+                saveAs(content, "Tickets_LDB_V6.zip");
                 document.getElementById('status').innerText = "Sucesso!";
 
             } catch (err) {
