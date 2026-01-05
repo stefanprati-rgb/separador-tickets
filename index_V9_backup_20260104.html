@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separador Tickets V11 (Zeros e Hífens)</title>
+    <title>Separador Tickets V9 (Final Estável)</title>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -118,8 +118,8 @@
 <body>
 
     <div class="container">
-        <h2>Separador Tickets V11</h2>
-        <p>Correção: Zeros à Esquerda e Hífens.</p>
+        <h2>Separador Tickets V9</h2>
+        <p>Correção de Dados (EAN Seguro).</p>
 
         <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📂 Carregar LDB</button>
         <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm" />
@@ -212,7 +212,6 @@
                 if (map["Brand"] === -1) throw new Error("Coluna Brand não encontrada.");
 
                 const groups = {};
-
                 for (let i = HEADER_IDX + 1; i < rawData.length; i++) {
                     const row = rawData[i];
                     const brandRaw = row[map["Brand"]];
@@ -227,33 +226,15 @@
                         groups[key].rows.push(["Tickets", "Marca", "EAN", "Responsavel", "Data Criacao", "Status", "OBS"]);
                     }
 
-                    const rawEan = row[map["Catalog ID"]];
-                    let listaEans = [];
-
-                    if (rawEan !== undefined && rawEan !== null) {
-                        let txt = String(rawEan);
-                        txt = txt.replace(/\s+e\s+/gi, " ");
-
-                        // CORREÇÃO 1: Adicionado hífen no split [;,\s\n\-]
-                        listaEans = txt.split(/[;,\s\n\-]+/)
-                            .map(e => e.trim())
-                            // CORREÇÃO 2: Validação via Regex (só dígitos) para não perder zeros
-                            .filter(e => e !== "" && /^\d+$/.test(e));
-                    }
-
-                    if (listaEans.length === 0) listaEans = [""];
-
-                    listaEans.forEach(eanUnico => {
-                        groups[key].rows.push([
-                            row[map["Key"]],
-                            row[map["Brand"]],
-                            eanUnico,
-                            row[map["Reporter"]],
-                            converterData(row[map["Created"]]),
-                            row[map["Status"]],
-                            ""
-                        ]);
-                    });
+                    groups[key].rows.push([
+                        row[map["Key"]],
+                        row[map["Brand"]],
+                        row[map["Catalog ID"]],
+                        row[map["Reporter"]],
+                        converterData(row[map["Created"]]),
+                        row[map["Status"]],
+                        ""
+                    ]);
                 }
 
                 const zip = new JSZip();
@@ -295,21 +276,20 @@
                             } else {
                                 // DADOS (Linha > 1)
 
-                                // === TIPAGEM INTELIGENTE DE EAN (Coluna C/2) ===
+                                // === CORREÇÃO SEGURA DO EAN (Coluna 2) ===
                                 if (C === 2) {
-                                    const valStr = String(ws[addr].v).trim();
-                                    if (/^\d+$/.test(valStr)) { // Confirma que são só dígitos
-                                        if (valStr.startsWith("0")) {
-                                            // Se começar com zero, FORÇA TEXTO (@)
-                                            ws[addr].t = 's';
-                                            ws[addr].z = '@';
-                                        } else {
-                                            // Se não, FORÇA NÚMERO (0) para evitar E+12
-                                            ws[addr].t = 'n';
-                                            ws[addr].z = '0';
-                                            ws[addr].v = Number(valStr);
+                                    const eanValue = ws[addr].v;
+                                    // Verifica se não é vazio/nulo
+                                    if (eanValue !== undefined && eanValue !== null && String(eanValue).trim() !== "") {
+                                        const eanNum = Number(eanValue);
+                                        // Verifica se é número válido
+                                        if (!isNaN(eanNum)) {
+                                            ws[addr].t = 'n'; // Numérico
+                                            ws[addr].z = '0'; // Sem E+
+                                            ws[addr].v = eanNum;
                                         }
                                     }
+                                    // Se for vazio ou NaN, mantém original (não estraga)
                                 }
 
                                 if (C === 5) {
@@ -358,7 +338,7 @@
                 }
 
                 const content = await zip.generateAsync({ type: "blob" });
-                saveAs(content, "Tickets_LDB_V11.zip");
+                saveAs(content, "Tickets_LDB_V9.zip");
                 document.getElementById('status').innerText = "Sucesso!";
 
             } catch (err) {
