@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separador Tickets V11 (Zeros e Hífens)</title>
+    <title>Separador Tickets V14.1 (Final)</title>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -17,30 +17,34 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
         }
 
         .container {
             background: white;
-            padding: 40px;
+            padding: 30px;
             border-radius: 12px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 480px;
+            width: 500px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
         }
 
         h2 {
             color: #333;
-            margin-bottom: 5px;
+            margin: 0 0 5px 0;
         }
 
         p {
             color: #666;
             font-size: 14px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
+        /* Botões Principais */
         .btn {
             padding: 12px;
             border-radius: 8px;
@@ -48,9 +52,10 @@
             cursor: pointer;
             width: 100%;
             display: block;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             border: none;
             transition: 0.2s;
+            font-size: 14px;
         }
 
         .btn-outline {
@@ -74,6 +79,21 @@
             background: #218838;
         }
 
+        .btn-success:disabled {
+            background: #94d3a2;
+            cursor: not-allowed;
+        }
+
+        .btn-zip {
+            background: #007bff;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-zip:hover {
+            background: #0056b3;
+        }
+
         #fileInput {
             display: none;
         }
@@ -81,12 +101,13 @@
         #fileName {
             font-weight: bold;
             color: #444;
-            margin: 10px 0 20px 0;
+            margin: 10px 0 15px 0;
             min-height: 20px;
+            font-size: 13px;
         }
 
         #status {
-            margin-top: 15px;
+            margin-top: 10px;
             font-size: 13px;
             color: #888;
         }
@@ -112,27 +133,110 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* LISTA DE ARQUIVOS */
+        #resultsArea {
+            display: none;
+            text-align: left;
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            /* ✅ CORRIGIDO de paddingTop para padding-top */
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .file-list {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            background: white;
+            font-size: 13px;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item span {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid #28a745;
+            color: #28a745;
+            background: white;
+            cursor: pointer;
+            width: auto;
+            margin: 0;
+            display: inline-block;
+        }
+
+        .btn-sm:hover {
+            background: #eafaf1;
+        }
+
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
     </style>
 </head>
 
 <body>
 
     <div class="container">
-        <h2>Separador Tickets V11</h2>
-        <p>Correção: Zeros à Esquerda e Hífens.</p>
+        <h2>Separador Tickets V14.1</h2>
+        <p>Escolha o que baixar.</p>
 
-        <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📂 Carregar LDB</button>
-        <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm" />
-
-        <div id="fileName"></div>
-        <button id="processBtn" class="btn btn-success" onclick="processarArquivo()">⚡ Gerar Relatórios</button>
+        <div id="uploadArea">
+            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📂 Carregar
+                LDB</button>
+            <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm" />
+            <div id="fileName"></div>
+            <button id="processBtn" class="btn btn-success" onclick="processarArquivo()">⚙️ Processar Arquivo</button>
+        </div>
 
         <div id="status">Aguardando arquivo...</div>
         <div class="loader" id="loader"></div>
+
+        <div id="resultsArea">
+            <div style="font-weight:bold; margin-bottom:10px; color:#444;">Arquivos Gerados:</div>
+
+            <div class="file-list" id="fileListContainer"></div>
+
+            <button class="btn btn-zip" onclick="baixarZipCompleto()">📦 Baixar Todos (.ZIP)</button>
+            <button class="btn btn-outline" style="margin-top:5px;" onclick="resetar()">🔄 Processar Outro</button>
+        </div>
     </div>
 
     <script>
         let workbookGlobal = null;
+        let arquivosGerados = {};
 
         const CORES_STATUS = {
             "open": "C6EFCE", "client review": "FFEB9C", "in queue": "FFFFCC",
@@ -155,15 +259,13 @@
             if (!file.name.match(/\.(xlsx|xls|xlsm)$/i)) {
                 alert('Apenas arquivos Excel são permitidos.');
                 this.value = '';
-                document.getElementById('fileName').innerText = "";
-                document.getElementById('processBtn').style.display = 'none';
-                document.getElementById('status').innerText = "Aguardando arquivo...";
+                resetar();
                 return;
             }
 
             document.getElementById('fileName').innerText = file.name;
             document.getElementById('loader').style.display = 'inline-block';
-            document.getElementById('status').innerText = "Carregando...";
+            document.getElementById('status').innerText = "Lendo estrutura...";
 
             const reader = new FileReader();
             reader.onload = function (e) {
@@ -171,7 +273,7 @@
                     const data = new Uint8Array(e.target.result);
                     workbookGlobal = XLSX.read(data, { type: 'array' });
                     document.getElementById('loader').style.display = 'none';
-                    document.getElementById('status').innerText = "Pronto.";
+                    document.getElementById('status').innerText = "Pronto para processar.";
                     document.getElementById('processBtn').style.display = 'block';
                 } catch (err) {
                     alert("Erro crítico ao ler o arquivo.");
@@ -182,14 +284,27 @@
             reader.readAsArrayBuffer(file);
         });
 
+        function resetar() {
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('resultsArea').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileName').innerText = '';
+            document.getElementById('processBtn').style.display = 'none';
+            document.getElementById('status').innerText = "Aguardando arquivo...";
+            arquivosGerados = {};
+        }
+
         async function processarArquivo() {
             if (!workbookGlobal) return;
             const btn = document.getElementById('processBtn');
             btn.disabled = true;
             btn.innerText = "Processando...";
             document.getElementById('loader').style.display = 'inline-block';
+            arquivosGerados = {};
 
             try {
+                await new Promise(r => setTimeout(r, 100));
+
                 const worksheet = workbookGlobal.Sheets[workbookGlobal.SheetNames[0]];
                 const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
@@ -212,6 +327,9 @@
                 if (map["Brand"] === -1) throw new Error("Coluna Brand não encontrada.");
 
                 const groups = {};
+                const masterRows = [];
+                masterRows.push(["Tickets LDB", "", "", "", "", "", ""]);
+                masterRows.push(["Tickets", "Brand", "EAN", "Responsavel", "Data Criacao", "Status", "OBS"]);
 
                 for (let i = HEADER_IDX + 1; i < rawData.length; i++) {
                     const row = rawData[i];
@@ -224,27 +342,22 @@
                     if (!groups[key]) {
                         groups[key] = { name: name, rows: [] };
                         groups[key].rows.push(["Tickets LDB", "", "", "", "", "", ""]);
-                        groups[key].rows.push(["Tickets", "Marca", "EAN", "Responsavel", "Data Criacao", "Status", "OBS"]);
+                        groups[key].rows.push(["Tickets", "Brand", "EAN", "Responsavel", "Data Criacao", "Status", "OBS"]);
                     }
 
                     const rawEan = row[map["Catalog ID"]];
                     let listaEans = [];
-
                     if (rawEan !== undefined && rawEan !== null) {
                         let txt = String(rawEan);
                         txt = txt.replace(/\s+e\s+/gi, " ");
-
-                        // CORREÇÃO 1: Adicionado hífen no split [;,\s\n\-]
                         listaEans = txt.split(/[;,\s\n\-]+/)
                             .map(e => e.trim())
-                            // CORREÇÃO 2: Validação via Regex (só dígitos) para não perder zeros
                             .filter(e => e !== "" && /^\d+$/.test(e));
                     }
-
                     if (listaEans.length === 0) listaEans = [""];
 
                     listaEans.forEach(eanUnico => {
-                        groups[key].rows.push([
+                        const processedRow = [
                             row[map["Key"]],
                             row[map["Brand"]],
                             eanUnico,
@@ -252,122 +365,176 @@
                             converterData(row[map["Created"]]),
                             row[map["Status"]],
                             ""
-                        ]);
+                        ];
+                        groups[key].rows.push(processedRow);
+                        masterRows.push(processedRow);
                     });
                 }
 
-                const zip = new JSZip();
+                // Geração em Memória
+                const wsMaster = criarSheetFormatada(masterRows);
+                const bufMaster = XLSX.write({ Sheets: { "Tickets": wsMaster }, SheetNames: ["Tickets"] }, { bookType: 'xlsx', type: 'array' });
+                arquivosGerados["00_Base_Geral_Completa.xlsx"] = bufMaster;
 
                 for (const k in groups) {
                     const item = groups[k];
-                    const ws = XLSX.utils.aoa_to_sheet(item.rows);
-
-                    if (!ws['!merges']) ws['!merges'] = [];
-                    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } });
-
-                    const range = XLSX.utils.decode_range(ws['!ref']);
-                    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 1, c: 0 }, e: { r: range.e.r, c: 6 } }) };
-
-                    for (let R = range.s.r; R <= range.e.r; ++R) {
-                        for (let C = range.s.c; C <= range.e.c; ++C) {
-                            const addr = XLSX.utils.encode_cell({ r: R, c: C });
-                            if (!ws[addr]) continue;
-
-                            let style = {
-                                font: { name: "Calibri", sz: 11 },
-                                border: {
-                                    top: { style: "thin", color: { rgb: "D4D4D4" } },
-                                    bottom: { style: "thin", color: { rgb: "D4D4D4" } },
-                                    left: { style: "thin", color: { rgb: "D4D4D4" } },
-                                    right: { style: "thin", color: { rgb: "D4D4D4" } }
-                                },
-                                alignment: { vertical: "center" }
-                            };
-
-                            if (R === 0) {
-                                style.font = { name: "Calibri", sz: 16, bold: true, color: { rgb: "333333" } };
-                                style.alignment = { horizontal: "center", vertical: "center" };
-                                style.fill = { fgColor: { rgb: "F2F2F2" } };
-                            } else if (R === 1) {
-                                style.font = { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } };
-                                style.fill = { fgColor: { rgb: "4472C4" } };
-                                style.alignment = { horizontal: "center", vertical: "center" };
-                            } else {
-                                // DADOS (Linha > 1)
-
-                                // === TIPAGEM INTELIGENTE DE EAN (Coluna C/2) ===
-                                if (C === 2) {
-                                    const valStr = String(ws[addr].v).trim();
-                                    if (/^\d+$/.test(valStr)) { // Confirma que são só dígitos
-                                        if (valStr.startsWith("0")) {
-                                            // Se começar com zero, FORÇA TEXTO (@)
-                                            ws[addr].t = 's';
-                                            ws[addr].z = '@';
-                                        } else {
-                                            // Se não, FORÇA NÚMERO (0) para evitar E+12
-                                            ws[addr].t = 'n';
-                                            ws[addr].z = '0';
-                                            ws[addr].v = Number(valStr);
-                                        }
-                                    }
-                                }
-
-                                if (C === 5) {
-                                    const valStatus = String(ws[addr].v).toLowerCase().trim();
-                                    if (CORES_STATUS[valStatus]) {
-                                        style.fill = { fgColor: { rgb: CORES_STATUS[valStatus] } };
-                                    }
-                                }
-                            }
-                            ws[addr].s = style;
-                        }
-                    }
-
-                    const startRow = 2;
-                    const colLegenda = 8;
-                    const cellTitle = XLSX.utils.encode_cell({ r: startRow, c: colLegenda });
-                    ws[cellTitle] = { v: "LEGENDA STATUS", t: 's', s: { font: { bold: true }, border: { bottom: { style: "medium" } } } };
-
-                    LEGENDA.forEach((leg, idx) => {
-                        const rowL = startRow + 1 + idx;
-                        const addrKey = XLSX.utils.encode_cell({ r: rowL, c: colLegenda });
-                        ws[addrKey] = {
-                            v: leg.status, t: 's',
-                            s: { fill: { fgColor: { rgb: leg.color } }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }, font: { bold: true, sz: 10 } }
-                        };
-                        const addrDesc = XLSX.utils.encode_cell({ r: rowL, c: colLegenda + 1 });
-                        ws[addrDesc] = { v: leg.desc, t: 's', s: { font: { sz: 10, italic: true } } };
-                    });
-
-                    const currentRange = XLSX.utils.decode_range(ws['!ref']);
-                    const maxLegendaRow = startRow + 1 + LEGENDA.length;
-                    currentRange.e.c = Math.max(currentRange.e.c, 9);
-                    currentRange.e.r = Math.max(currentRange.e.r, maxLegendaRow);
-                    ws['!ref'] = XLSX.utils.encode_range(currentRange);
-
-                    ws['!cols'] = [
-                        { wch: 15 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
-                        { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 2 },
-                        { wch: 25 }, { wch: 40 }
-                    ];
-
+                    const ws = criarSheetFormatada(item.rows);
                     const wbNew = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wbNew, ws, "Tickets");
                     const buffer = XLSX.write(wbNew, { bookType: 'xlsx', type: 'array' });
-                    zip.file(`Tickets_${item.name.replace(/[^a-z0-9 ]/gi, '')}.xlsx`, buffer);
+                    arquivosGerados[`Tickets_${item.name.replace(/[^a-z0-9 ]/gi, '')}.xlsx`] = buffer;
                 }
 
-                const content = await zip.generateAsync({ type: "blob" });
-                saveAs(content, "Tickets_LDB_V11.zip");
-                document.getElementById('status').innerText = "Sucesso!";
+                renderizarListaArquivos();
+
+                document.getElementById('uploadArea').style.display = 'none';
+                document.getElementById('resultsArea').style.display = 'flex';
+                document.getElementById('status').innerText = "Processamento concluído!";
 
             } catch (err) {
                 alert("Erro: " + err.message);
             } finally {
                 btn.disabled = false;
-                btn.innerText = "⚡ Gerar Relatórios";
+                btn.innerText = "⚙️ Processar Arquivo";
                 document.getElementById('loader').style.display = 'none';
             }
+        }
+
+        function renderizarListaArquivos() {
+            const listContainer = document.getElementById('fileListContainer');
+            listContainer.innerHTML = "";
+            const nomesArquivos = Object.keys(arquivosGerados).sort();
+
+            nomesArquivos.forEach(nome => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+
+                const span = document.createElement('span');
+                span.innerHTML = (nome.includes("00_Base")) ? `📊 ${nome}` : `📄 ${nome}`;
+
+                const btn = document.createElement('button');
+                btn.className = 'btn-sm';
+                btn.innerHTML = '📥 Baixar';
+                btn.onclick = () => baixarUnico(nome);
+
+                div.appendChild(span);
+                div.appendChild(btn);
+                listContainer.appendChild(div);
+            });
+        }
+
+        function baixarUnico(nomeArquivo) {
+            const buffer = arquivosGerados[nomeArquivo];
+            const blob = new Blob([buffer], { type: "application/octet-stream" });
+            saveAs(blob, nomeArquivo);
+        }
+
+        async function baixarZipCompleto() {
+            const zip = new JSZip();
+            for (const [nome, buffer] of Object.entries(arquivosGerados)) {
+                zip.file(nome, buffer);
+            }
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, "Tickets_LDB_V14.1.zip");
+        }
+
+        function criarSheetFormatada(rows) {
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+
+            if (!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } });
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 1, c: 0 }, e: { r: range.e.r, c: 6 } }) };
+
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (!ws[addr]) continue;
+
+                    let style = {
+                        font: { name: "Calibri", sz: 11 },
+                        border: {
+                            top: { style: "thin", color: { rgb: "D4D4D4" } },
+                            bottom: { style: "thin", color: { rgb: "D4D4D4" } },
+                            left: { style: "thin", color: { rgb: "D4D4D4" } },
+                            right: { style: "thin", color: { rgb: "D4D4D4" } }
+                        },
+                        alignment: { vertical: "center" }
+                    };
+
+                    if (R === 0) {
+                        style.font = { name: "Calibri", sz: 16, bold: true, color: { rgb: "333333" } };
+                        style.alignment = { horizontal: "center", vertical: "center" };
+                        style.fill = { fgColor: { rgb: "F2F2F2" } };
+                    } else if (R === 1) {
+                        style.font = { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } };
+                        style.fill = { fgColor: { rgb: "4472C4" } };
+                        style.alignment = { horizontal: "center", vertical: "center" };
+                    } else {
+                        if (C === 2) {
+                            const valStr = String(ws[addr].v).trim();
+                            if (/^\d+$/.test(valStr)) {
+                                if (valStr.startsWith("0")) {
+                                    ws[addr].t = 's';
+                                    ws[addr].z = '@';
+                                } else {
+                                    ws[addr].t = 'n';
+                                    ws[addr].z = '0';
+                                    ws[addr].v = Number(valStr);
+                                }
+                            }
+                        }
+                        if (C === 5) {
+                            const valStatus = String(ws[addr].v).toLowerCase().trim();
+                            if (CORES_STATUS[valStatus]) {
+                                style.fill = { fgColor: { rgb: CORES_STATUS[valStatus] } };
+                            }
+                        }
+                    }
+                    ws[addr].s = style;
+                }
+            }
+
+            const startRow = 2;
+            const colQtd = 7;
+            const colLeg = 8;
+
+            const cellTitleQtd = XLSX.utils.encode_cell({ r: startRow, c: colQtd });
+            ws[cellTitleQtd] = { v: "Qtd", t: 's', s: { font: { bold: true }, alignment: { horizontal: "center" }, border: { bottom: { style: "medium" } } } };
+
+            const cellTitleLeg = XLSX.utils.encode_cell({ r: startRow, c: colLeg });
+            ws[cellTitleLeg] = { v: "LEGENDA STATUS", t: 's', s: { font: { bold: true }, border: { bottom: { style: "medium" } } } };
+
+            LEGENDA.forEach((leg, idx) => {
+                const rowL = startRow + 1 + idx;
+                const addrQtd = XLSX.utils.encode_cell({ r: rowL, c: colQtd });
+                ws[addrQtd] = {
+                    t: 'n',
+                    f: `COUNTIF(F:F, I${rowL + 1})`,
+                    s: { font: { bold: true }, alignment: { horizontal: "center" }, border: { bottom: { style: "thin" } } }
+                };
+                const addrKey = XLSX.utils.encode_cell({ r: rowL, c: colLeg });
+                ws[addrKey] = {
+                    v: leg.status, t: 's',
+                    s: { fill: { fgColor: { rgb: leg.color } }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }, font: { bold: true, sz: 10 } }
+                };
+                const addrDesc = XLSX.utils.encode_cell({ r: rowL, c: colLeg + 1 });
+                ws[addrDesc] = { v: leg.desc, t: 's', s: { font: { sz: 10, italic: true } } };
+            });
+
+            const currentRange = XLSX.utils.decode_range(ws['!ref']);
+            const maxLegendaRow = startRow + 1 + LEGENDA.length;
+            currentRange.e.c = Math.max(currentRange.e.c, 9);
+            currentRange.e.r = Math.max(currentRange.e.r, maxLegendaRow);
+            ws['!ref'] = XLSX.utils.encode_range(currentRange);
+
+            ws['!cols'] = [
+                { wch: 15 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
+                { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 8 },
+                { wch: 25 }, { wch: 40 }
+            ];
+            return ws;
         }
 
         function converterData(val) {
