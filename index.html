@@ -4,10 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separador Tickets V6 (Blindado)</title>
+    <title>Separador Tickets V9 (Final Estável)</title>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -75,11 +74,6 @@
             background: #218838;
         }
 
-        .btn-success:disabled {
-            background: #94d3a2;
-            cursor: not-allowed;
-        }
-
         #fileInput {
             display: none;
         }
@@ -124,14 +118,13 @@
 <body>
 
     <div class="container">
-        <h2>Separador Tickets V6</h2>
-        <p>Versão Corrigida e Validada.</p>
+        <h2>Separador Tickets V9</h2>
+        <p>Correção de Dados (EAN Seguro).</p>
 
         <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📂 Carregar LDB</button>
         <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm" />
 
         <div id="fileName"></div>
-
         <button id="processBtn" class="btn btn-success" onclick="processarArquivo()">⚡ Gerar Relatórios</button>
 
         <div id="status">Aguardando arquivo...</div>
@@ -159,10 +152,9 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // --- CORREÇÃO 3: Reset de estado se arquivo inválido ---
             if (!file.name.match(/\.(xlsx|xls|xlsm)$/i)) {
                 alert('Apenas arquivos Excel são permitidos.');
-                this.value = ''; // Limpa o input
+                this.value = '';
                 document.getElementById('fileName').innerText = "";
                 document.getElementById('processBtn').style.display = 'none';
                 document.getElementById('status').innerText = "Aguardando arquivo...";
@@ -182,7 +174,6 @@
                     document.getElementById('status').innerText = "Pronto.";
                     document.getElementById('processBtn').style.display = 'block';
                 } catch (err) {
-                    // --- CORREÇÃO 1: Esconder Loader no erro de leitura ---
                     alert("Erro crítico ao ler o arquivo.");
                     document.getElementById('loader').style.display = 'none';
                     document.getElementById('status').innerText = "Erro na leitura.";
@@ -210,12 +201,7 @@
 
                 headerRow.forEach((v, i) => {
                     const s = String(v).toLowerCase().trim();
-
-                    // --- CORREÇÃO 2: Mapeamento Seguro de Key ---
-                    // Evita falsos positivos como "Monkey" ou "Donkey"
                     if (s === "key" || s === "tickets" || s === "ticket id") map["Key"] = i;
-
-                    // Outros mapeamentos
                     if (s.includes("brand")) map["Brand"] = i;
                     if (s.includes("catalog") && s.includes("id")) map["Catalog ID"] = i;
                     if (s.includes("reporter")) map["Reporter"] = i;
@@ -287,10 +273,30 @@
                                 style.font = { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } };
                                 style.fill = { fgColor: { rgb: "4472C4" } };
                                 style.alignment = { horizontal: "center", vertical: "center" };
-                            } else if (C === 5) {
-                                const valStatus = String(ws[addr].v).toLowerCase().trim();
-                                if (CORES_STATUS[valStatus]) {
-                                    style.fill = { fgColor: { rgb: CORES_STATUS[valStatus] } };
+                            } else {
+                                // DADOS (Linha > 1)
+
+                                // === CORREÇÃO SEGURA DO EAN (Coluna 2) ===
+                                if (C === 2) {
+                                    const eanValue = ws[addr].v;
+                                    // Verifica se não é vazio/nulo
+                                    if (eanValue !== undefined && eanValue !== null && String(eanValue).trim() !== "") {
+                                        const eanNum = Number(eanValue);
+                                        // Verifica se é número válido
+                                        if (!isNaN(eanNum)) {
+                                            ws[addr].t = 'n'; // Numérico
+                                            ws[addr].z = '0'; // Sem E+
+                                            ws[addr].v = eanNum;
+                                        }
+                                    }
+                                    // Se for vazio ou NaN, mantém original (não estraga)
+                                }
+
+                                if (C === 5) {
+                                    const valStatus = String(ws[addr].v).toLowerCase().trim();
+                                    if (CORES_STATUS[valStatus]) {
+                                        style.fill = { fgColor: { rgb: CORES_STATUS[valStatus] } };
+                                    }
                                 }
                             }
                             ws[addr].s = style;
@@ -299,7 +305,6 @@
 
                     const startRow = 2;
                     const colLegenda = 8;
-
                     const cellTitle = XLSX.utils.encode_cell({ r: startRow, c: colLegenda });
                     ws[cellTitle] = { v: "LEGENDA STATUS", t: 's', s: { font: { bold: true }, border: { bottom: { style: "medium" } } } };
 
@@ -308,11 +313,7 @@
                         const addrKey = XLSX.utils.encode_cell({ r: rowL, c: colLegenda });
                         ws[addrKey] = {
                             v: leg.status, t: 's',
-                            s: {
-                                fill: { fgColor: { rgb: leg.color } },
-                                border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } },
-                                font: { bold: true, sz: 10 }
-                            }
+                            s: { fill: { fgColor: { rgb: leg.color } }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }, font: { bold: true, sz: 10 } }
                         };
                         const addrDesc = XLSX.utils.encode_cell({ r: rowL, c: colLegenda + 1 });
                         ws[addrDesc] = { v: leg.desc, t: 's', s: { font: { sz: 10, italic: true } } };
@@ -325,7 +326,7 @@
                     ws['!ref'] = XLSX.utils.encode_range(currentRange);
 
                     ws['!cols'] = [
-                        { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 },
+                        { wch: 15 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
                         { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 2 },
                         { wch: 25 }, { wch: 40 }
                     ];
@@ -337,7 +338,7 @@
                 }
 
                 const content = await zip.generateAsync({ type: "blob" });
-                saveAs(content, "Tickets_LDB_V6.zip");
+                saveAs(content, "Tickets_LDB_V9.zip");
                 document.getElementById('status').innerText = "Sucesso!";
 
             } catch (err) {
